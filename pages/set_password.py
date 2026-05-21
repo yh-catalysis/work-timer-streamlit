@@ -53,11 +53,14 @@ if submitted:
     elif len(pw1) < 8:
         st.warning("パスワードは 8 文字以上で設定してください。")
     else:
+        ok = False
         try:
             client = get_client()
             client.auth.set_session(session.access_token, session.refresh_token)
             client.auth.update_user({"password": pw1})
-            st.success("パスワードを設定しました！アプリを開始します...")
-            st.switch_page("pages/timer.py")
+            ok = True
         except Exception as e:
             st.error(f"パスワードの設定に失敗しました: {e}")
+        if ok:
+            st.success("パスワードを設定しました！アプリを開始します...")
+            st.switch_page("pages/timer.py")
