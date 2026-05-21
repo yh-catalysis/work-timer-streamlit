@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 from utils.auth import get_session, refresh_session, logout, get_user
 
 st.set_page_config(
@@ -49,30 +48,9 @@ st.markdown("""
 
 refresh_session()
 
-# Supabase implicit flow: URL fragment (#access_token=...) をクエリパラメータに変換。
-# Streamlit はフラグメントを読めないため、同一オリジン JS で redirect する。
-if not st.query_params.get("code") and not st.query_params.get("access_token"):
-    components.html(
-        """<script>
-        (function () {
-            var h = window.parent.location.hash;
-            if (h && h.includes('access_token')) {
-                var qs = h.substring(1);
-                window.parent.location.replace(
-                    window.parent.location.origin
-                    + window.parent.location.pathname
-                    + '?' + qs
-                );
-            }
-        })();
-        </script>""",
-        height=0,
-    )
-
-# 招待リンク（?code=）があれば未ログインでもパスワード設定ページへ
+# 招待リンク（?token_hash=）があれば未ログインでもパスワード設定ページへ
 if (
-    st.query_params.get("code")
-    or st.query_params.get("access_token")
+    st.query_params.get("token_hash")
     or st.session_state.get("invite_session_exchanged")
 ):
     pages = [

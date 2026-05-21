@@ -1,9 +1,7 @@
 """
-招待リンク受け入れ・パスワード設定ページ
-
-フロー:
-  1. Supabase が招待メールのリンクを ?code=<pkce_code> 付きでこのページへリダイレクト
-  2. code を exchange_code_for_session() でセッションに交換
+招待リンク受け入れ・パスワード設定ページフロー:
+  1. Supabase 招待メールのリンクが ?token_hash=<hash>&type=invite でこのページへリダイレクト
+  2. token_hash を verify_otp() でセッションに交換
   3. 新しいパスワードを入力してもらい update_user() で設定
   4. そのままログイン状態でタイマーページへ遷移
 """
@@ -12,12 +10,11 @@ from utils.supabase_client import get_client
 
 st.title("🔐 パスワードを設定する")
 
-# ── ステップ 1: URL パラメータ取得（PKCE: ?code= / implicit: ?access_token=）──
-code = st.query_params.get("code")
-access_token = st.query_params.get("access_token")
-refresh_token = st.query_params.get("refresh_token", "")
+# ── ステップ 1: URL パラメータ取得 ──────────────────────────────
+token_hash = st.query_params.get("token_hash")
+otp_type   = st.query_params.get("type", "invite")
 
-if not code and not access_token:
+if not token_hash and not st.session_state.get("invite_session_exchanged"):
     st.error("招待リンクが無効か、期限切れです。管理者に再度招待を依頼してください。")
     st.stop()
 
@@ -25,12 +22,7 @@ if not code and not access_token:
 if "invite_session_exchanged" not in st.session_state:
     try:
         client = get_client()
-        if code:
-            # PKCE flow
-            resp = client.auth.exchange_code_for_session(code)
-        else:
-            # Implicit flow (Supabase がフラグメントで渡した場合)
-            resp = client.auth.set_session(access_token, refresh_token)
+        resp = client.auth.verify_otp({"token_hash": token_hash, "type": otp_type})
         st.session_state["supabase_session"] = resp.session
         st.session_state["invite_session_exchanged"] = True
         st.query_params.clear()
