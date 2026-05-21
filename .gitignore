@@ -1,0 +1,44 @@
+# ===== 環境変数・シークレット =====
+.env
+.env.local
+.env.*.local
+.streamlit/secrets.toml
+
+# ===== Python =====
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ===== uv =====
+# uv.lock はコミットする（再現性のため）
+# .python-version はコミットする
+
+# ===== Supabase CLI =====
+# supabase/.branches/ はローカル状態なのでコミットしない
+supabase/.branches/
+supabase/.temp/
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== エディタ =====
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== 出力ファイル =====
+*.pdf
