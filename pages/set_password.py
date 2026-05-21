@@ -12,21 +12,27 @@ from utils.supabase_client import get_client
 
 st.title("🔐 パスワードを設定する")
 
-# ── ステップ 1: URL の ?code= を取得 ──────────────────────────
+# ── ステップ 1: URL パラメータ取得（PKCE: ?code= / implicit: ?access_token=）──
 code = st.query_params.get("code")
+access_token = st.query_params.get("access_token")
+refresh_token = st.query_params.get("refresh_token", "")
 
-if not code:
+if not code and not access_token:
     st.error("招待リンクが無効か、期限切れです。管理者に再度招待を依頼してください。")
     st.stop()
 
-# ── ステップ 2: code をセッションに交換（1回だけ実行）─────────
+# ── ステップ 2: セッション取得（1回だけ実行）────────────────────
 if "invite_session_exchanged" not in st.session_state:
     try:
         client = get_client()
-        resp = client.auth.exchange_code_for_session(code)
+        if code:
+            # PKCE flow
+            resp = client.auth.exchange_code_for_session(code)
+        else:
+            # Implicit flow (Supabase がフラグメントで渡した場合)
+            resp = client.auth.set_session(access_token, refresh_token)
         st.session_state["supabase_session"] = resp.session
         st.session_state["invite_session_exchanged"] = True
-        # code を URL から消す（リロード時の二重実行防止）
         st.query_params.clear()
     except Exception as e:
         st.error(f"招待トークンの検証に失敗しました: {e}")
