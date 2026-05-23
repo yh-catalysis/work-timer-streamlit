@@ -1,5 +1,5 @@
 [project]
-name = "work-timer-stramlit"
+name = "work-timer-streamlit"
 version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.13"
@@ -8,5 +8,6 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "reportlab>=4.5.1",
     "streamlit>=1.57.0",
+    "streamlit-cookies-manager>=0.2.0",
     "supabase>=2.30.0",
 ]

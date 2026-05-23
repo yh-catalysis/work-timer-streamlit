@@ -4,6 +4,7 @@
         "Heisei",
         "Kaku",
         "Plotly",
+        "reportlab",
         "streamlit",
         "supabase"
     ]

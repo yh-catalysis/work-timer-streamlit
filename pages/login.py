@@ -6,8 +6,17 @@ st.title("⏱️ 作業記録アプリ")
 st.subheader("ログイン")
 
 with st.form("login_form"):
-    email = st.text_input("メールアドレス", placeholder="email@example.com")
-    password = st.text_input("パスワード", type="password", placeholder="••••••••")
+    email = st.text_input(
+        "メールアドレス",
+        placeholder="email@example.com",
+        autocomplete="email",
+    )
+    password = st.text_input(
+        "パスワード",
+        type="password",
+        placeholder="••••••••",
+        autocomplete="current-password",
+    )
     submitted = st.form_submit_button("ログイン", width="stretch", type="primary")
 
 if submitted:
