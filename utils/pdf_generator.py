@@ -1,5 +1,6 @@
+from datetime import UTC, datetime, timedelta, timezone
 from io import BytesIO
-from datetime import datetime, timezone, timedelta
+from typing import Any
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -24,12 +25,12 @@ FONT = "HeiseiKakuGo-W5"
 
 def _to_jst(dt: datetime) -> datetime:
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt.astimezone(JST)
 
 
 def _end_time_str(start_dt: datetime, end_dt: datetime) -> str:
-    """日またぎの場合、終了「時間 + 24×日数差」で表現する。
+    """日またぎの場合、終了「時間 + 24x日数差」で表現する。
     例: 23:00 -> 翌 02:30 => "26:30"
     """
     s = _to_jst(start_dt)
@@ -44,7 +45,7 @@ def _para(text: str, style: ParagraphStyle) -> Paragraph:
 
 
 def generate_pdf(
-    records: list[dict],
+    records: list[dict[str, Any]],
     year: int,
     month: int,
     user_email: str = "",
@@ -68,20 +69,39 @@ def generate_pdf(
     )
 
     title_style = ParagraphStyle(
-        "Title", fontName=FONT, fontSize=16, leading=22, spaceAfter=4
+        "Title",
+        fontName=FONT,
+        fontSize=16,
+        leading=22,
+        spaceAfter=4,
     )
     sub_style = ParagraphStyle(
-        "Sub", fontName=FONT, fontSize=10, leading=14, spaceAfter=10,
+        "Sub",
+        fontName=FONT,
+        fontSize=10,
+        leading=14,
+        spaceAfter=10,
         textColor=colors.HexColor("#64748B"),
     )
     cell_style = ParagraphStyle(
-        "Cell", fontName=FONT, fontSize=9, leading=13
+        "Cell",
+        fontName=FONT,
+        fontSize=9,
+        leading=13,
     )
     hdr_style = ParagraphStyle(
-        "Hdr", fontName=FONT, fontSize=9, leading=13, textColor=colors.white
+        "Hdr",
+        fontName=FONT,
+        fontSize=9,
+        leading=13,
+        textColor=colors.white,
     )
     summary_style = ParagraphStyle(
-        "Summary", fontName=FONT, fontSize=11, leading=16, spaceAfter=8,
+        "Summary",
+        fontName=FONT,
+        fontSize=11,
+        leading=16,
+        spaceAfter=8,
         textColor=colors.HexColor("#1E293B"),
     )
 
@@ -122,27 +142,33 @@ def generate_pdf(
         else:
             end_str = dur_str = "—"
 
-        table_data.append([
-            _para(date_str, cell_style),
-            _para(start_str, cell_style),
-            _para(end_str, cell_style),
-            _para(rec.get("client") or "—", cell_style),
-            _para(rec.get("task_detail") or "—", cell_style),
-            _para(dur_str, cell_style),
-        ])
+        table_data.append(
+            [
+                _para(date_str, cell_style),
+                _para(start_str, cell_style),
+                _para(end_str, cell_style),
+                _para(rec.get("client") or "—", cell_style),
+                _para(rec.get("task_detail") or "—", cell_style),
+                _para(dur_str, cell_style),
+            ],
+        )
 
     col_widths = [28 * mm, 15 * mm, 15 * mm, 36 * mm, 62 * mm, 19 * mm]
     table = Table(table_data, colWidths=col_widths, repeatRows=1)
-    table.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, 0),  colors.HexColor("#2563EB")),
-        ("ROWBACKGROUNDS",(0, 1), (-1, -1), [colors.white, colors.HexColor("#EFF6FF")]),
-        ("GRID",          (0, 0), (-1, -1), 0.4, colors.HexColor("#CBD5E1")),
-        ("VALIGN",        (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING",    (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ("LEFTPADDING",   (0, 0), (-1, -1), 4),
-        ("RIGHTPADDING",  (0, 0), (-1, -1), 4),
-    ]))
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2563EB")),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#EFF6FF")]),
+                ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#CBD5E1")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ],
+        ),
+    )
     elements.append(table)
 
     # ---- フッター ----

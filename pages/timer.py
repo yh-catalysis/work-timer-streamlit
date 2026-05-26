@@ -8,16 +8,22 @@
 
 import time
 from datetime import UTC, datetime, timedelta, timezone
+from typing import Any
 
 import streamlit as st
 
-from utils.auth import get_user_id
+from utils.auth import get_user_id, refresh_session
 from utils.supabase_client import get_client
 
 JST = timezone(timedelta(hours=9))
+RECENT_PILL_COUNT = 3
 
+refresh_session()
 sb = get_client()
 user_id = get_user_id()
+if not user_id:
+    st.switch_page("pages/login.py")
+    st.stop()
 
 
 # ---- セッション状態の初期化 ----
@@ -29,25 +35,70 @@ if "timer_initialized" not in st.session_state:
     st.session_state["timer_initialized"] = False
 
 
-def fetch_active_log() -> dict | None:
+def fetch_active_log() -> dict[str, Any] | None:
     """DB から進行中（end_time IS NULL）レコードを取得する。"""
     resp = (
         sb.table("work_logs").select("id, start_time").eq("user_id", user_id).is_("end_time", "null").limit(1).execute()
     )
-    return resp.data[0] if resp.data else None
+    if not resp.data or not isinstance(resp.data, list):
+        return None
+
+    first = resp.data[0]
+    if not isinstance(first, dict):
+        return None
+    return first
+
+
+def _unique_by_recent(rows: list[dict[str, Any]], field_name: str) -> list[str]:
+    """新しい順を保ったまま、空でないユニーク値を返す。"""
+    seen: set[str] = set()
+    result: list[str] = []
+    for row in rows:
+        value = str(row.get(field_name) or "").strip()
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result
+
+
+def _split_recent_and_others(items: list[str]) -> tuple[list[str], list[str]]:
+    recent = items[:RECENT_PILL_COUNT]
+    others = items[RECENT_PILL_COUNT:]
+    return recent, others
+
+
+def _resolve_input_value(
+    typed_value: str,
+    selected_recent: str | None,
+    selected_other: str | None,
+    all_options: list[str],
+) -> str:
+    typed = typed_value.strip()
+    if typed:
+        if typed in all_options:
+            return typed
+        return typed
+    if selected_recent:
+        return selected_recent
+    if selected_other:
+        return selected_other
+    return ""
 
 
 def fetch_suggestions() -> tuple[list[str], list[str]]:
-    """過去入力からユニークな相手先・作業内容リストを取得する。"""
+    """過去入力から新しい順のユニークな相手先・作業内容リストを取得する。"""
     resp = (
         sb.table("work_logs")
         .select("client, task_detail")
         .eq("user_id", user_id)
         .not_.is_("end_time", "null")
+        .order("end_time", desc=True)
         .execute()
     )
-    clients = sorted({r["client"] for r in resp.data if r.get("client")})
-    tasks = sorted({r["task_detail"] for r in resp.data if r.get("task_detail")})
+    rows = [r for r in resp.data or [] if isinstance(r, dict)]
+    clients = _unique_by_recent(rows, "client")
+    tasks = _unique_by_recent(rows, "task_detail")
     return clients, tasks
 
 
@@ -87,46 +138,90 @@ if st.session_state["active_log_id"]:
 
     # 候補一覧を取得
     clients, tasks = fetch_suggestions()
+    recent_clients, other_clients = _split_recent_and_others(clients)
+    recent_tasks, other_tasks = _split_recent_and_others(tasks)
 
     # ---- 相手先入力 ----
     st.markdown("##### 🏢 相手先")
-    client_options = clients + ["＋ 新規入力"]
-    client_choice = st.selectbox(
-        "相手先",
-        client_options if clients else ["＋ 新規入力"],
-        index=None,
-        placeholder="選択または新規入力...",
-        key="client_choice",
-        label_visibility="collapsed",
-    )
-    if client_choice == "＋ 新規入力" or not clients:
-        client_val = st.text_input(
-            "相手先（新規）", key="client_new", placeholder="例: 株式会社〇〇", label_visibility="collapsed"
+    if recent_clients:
+        client_recent_choice = st.pills(
+            "最近の相手先",
+            recent_clients,
+            selection_mode="single",
+            key="client_recent_pill",
+            width="stretch",
         )
     else:
-        client_val = client_choice or ""
+        client_recent_choice = None
+        st.caption("最近の相手先候補はありません。")
+
+    if other_clients:
+        client_other_choice = st.selectbox(
+            "その他の相手先を選択",
+            other_clients,
+            index=None,
+            placeholder="候補を検索して選択...",
+            key="client_other_select",
+            width="stretch",
+        )
+    else:
+        client_other_choice = None
+        st.caption("その他の候補はありません。")
+
+    client_typed = st.text_input(
+        "新規の相手先を入力",
+        key="client_new",
+        placeholder="例: 株式会社〇〇",
+        width="stretch",
+    )
+
+    client_val = _resolve_input_value(
+        typed_value=client_typed,
+        selected_recent=client_recent_choice,
+        selected_other=client_other_choice,
+        all_options=clients,
+    )
 
     # ---- 作業内容入力 ----
     st.markdown("##### 📝 作業内容")
-    task_options = tasks + ["＋ 新規入力"]
-    task_choice = st.selectbox(
-        "作業内容",
-        task_options if tasks else ["＋ 新規入力"],
-        index=None,
-        placeholder="選択または新規入力...",
-        key="task_choice",
-        label_visibility="collapsed",
-    )
-    if task_choice == "＋ 新規入力" or not tasks:
-        task_val = st.text_area(
-            "作業内容（新規）",
-            key="task_new",
-            placeholder="例: システム設計レビュー",
-            height=80,
-            label_visibility="collapsed",
+    if recent_tasks:
+        task_recent_choice = st.pills(
+            "最近の作業内容",
+            recent_tasks,
+            selection_mode="single",
+            key="task_recent_pill",
+            width="stretch",
         )
     else:
-        task_val = task_choice or ""
+        task_recent_choice = None
+        st.caption("最近の作業内容候補はありません。")
+
+    if other_tasks:
+        task_other_choice = st.selectbox(
+            "その他の作業内容を選択",
+            other_tasks,
+            index=None,
+            placeholder="候補を検索して選択...",
+            key="task_other_select",
+            width="stretch",
+        )
+    else:
+        task_other_choice = None
+        st.caption("その他の候補はありません。")
+
+    task_typed = st.text_area(
+        "新規の作業内容を入力",
+        key="task_new",
+        placeholder="例: システム設計レビュー",
+        height=80,
+    )
+
+    task_val = _resolve_input_value(
+        typed_value=task_typed,
+        selected_recent=task_recent_choice,
+        selected_other=task_other_choice,
+        all_options=tasks,
+    )
 
     st.write("")
 
@@ -151,7 +246,7 @@ if st.session_state["active_log_id"]:
         st.session_state["active_log_id"] = None
         st.session_state["active_start_time"] = None
         st.session_state["timer_initialized"] = False
-        st.success("✅ 作業を終了しました！")
+        st.success("✅ 作業を終了しました!")
         st.balloons()
         time.sleep(1.5)
         st.rerun()
@@ -176,7 +271,13 @@ else:
 
         # DB から実際の start_time を取得
         rec = sb.table("work_logs").select("start_time").eq("id", log_id).single().execute()
+        rec_data = rec.data if isinstance(rec.data, dict) else {}
+        start_time_raw = rec_data.get("start_time")
+        if not isinstance(start_time_raw, str):
+            st.error("開始時刻の取得に失敗しました。再度お試しください。")
+            st.stop()
+
         st.session_state["active_log_id"] = log_id
-        st.session_state["active_start_time"] = datetime.fromisoformat(rec.data["start_time"])
+        st.session_state["active_start_time"] = datetime.fromisoformat(start_time_raw)
         st.session_state["timer_initialized"] = True
         st.rerun()
