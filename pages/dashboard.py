@@ -7,26 +7,34 @@
 """
 
 from datetime import UTC, datetime, timedelta, timezone
+from typing import Any, cast
 
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from utils.auth import get_user_id
+from utils.auth import get_user_id, refresh_session
 from utils.supabase_client import get_client
 
 JST = timezone(timedelta(hours=9))
-sb = get_client()
+MONTHS_PER_YEAR = 12
+
+refresh_session()
 user_id = get_user_id()
+if not user_id:
+    st.switch_page("pages/login.py")
+    st.stop()
+
+sb = get_client()
 
 
 @st.cache_data(ttl=30, show_spinner="データを取得中...")
-def fetch_records(uid: str, y: int, m: int) -> list[dict]:
+def fetch_records(uid: str, y: int, m: int) -> list[dict[str, Any]]:
     """指定月の完了済みレコードを取得する（JST基準）。"""
     start = datetime(y, m, 1, tzinfo=JST).astimezone(UTC)
     end = (
         datetime(y + 1, 1, 1, tzinfo=JST).astimezone(UTC)
-        if m == 12
+        if m == MONTHS_PER_YEAR
         else datetime(y, m + 1, 1, tzinfo=JST).astimezone(UTC)
     )
     resp = (
@@ -39,7 +47,7 @@ def fetch_records(uid: str, y: int, m: int) -> list[dict]:
         .order("start_time")
         .execute()
     )
-    return resp.data
+    return [cast("dict[str, Any]", row) for row in (resp.data or []) if isinstance(row, dict)]
 
 
 # ---- UI ----
@@ -92,7 +100,7 @@ fig_pie = px.pie(
     color_discrete_sequence=COLORS,
 )
 fig_pie.update_traces(textposition="inside", textinfo="percent+label")
-fig_pie.update_layout(showlegend=True, margin=dict(t=20, b=10, l=10, r=10))
+fig_pie.update_layout(showlegend=True, margin={"t": 20, "b": 10, "l": 10, "r": 10})
 st.plotly_chart(fig_pie, width="stretch")
 
 # ---- 作業内容別 水平棒グラフ ----
@@ -107,9 +115,10 @@ fig_bar = px.bar(
     orientation="h",
     color="作業内容",
     color_discrete_sequence=COLORS,
-    text_auto=".1f",
+    text_auto=True,
 )
-fig_bar.update_layout(showlegend=False, margin=dict(t=10, b=10, l=10, r=10), yaxis_title="")
+fig_bar.update_traces(texttemplate="%{x:.1f}")
+fig_bar.update_layout(showlegend=False, margin={"t": 10, "b": 10, "l": 10, "r": 10}, yaxis_title="")
 st.plotly_chart(fig_bar, width="stretch")
 
 # ---- 日別・相手先別 積み上げ棒グラフ ----
@@ -122,11 +131,12 @@ fig_stack = px.bar(
     color="client",
     color_discrete_sequence=COLORS,
     labels={"date": "日付", "duration_h": "時間 (h)", "client": "相手先"},
-    text_auto=".1f",
+    text_auto=True,
 )
+fig_stack.update_traces(texttemplate="%{y:.1f}")
 fig_stack.update_layout(
     barmode="stack",
-    margin=dict(t=10, b=10, l=10, r=10),
+    margin={"t": 10, "b": 10, "l": 10, "r": 10},
     xaxis_title="日付",
 )
 st.plotly_chart(fig_stack, width="stretch")

@@ -3,34 +3,36 @@
 - 過去の作業記録を逆時系列で一覧表示（Read-only）
 - 各行に削除ボタン（確認ステップあり）
 """
-from datetime import datetime, timezone, timedelta
+
+from datetime import UTC, datetime, timedelta, timezone
+from typing import Any, cast
 
 import streamlit as st
 
-from utils.auth import get_user_id
+from utils.auth import get_user_id, refresh_session
 from utils.supabase_client import get_client
 
 JST = timezone(timedelta(hours=9))
-sb = get_client()
+
+refresh_session()
 user_id = get_user_id()
+if not user_id:
+    st.switch_page("pages/login.py")
+    st.stop()
+
+sb = get_client()
 
 
 def to_jst(dt: datetime) -> datetime:
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt.astimezone(JST)
 
 
 @st.cache_data(ttl=10, show_spinner="読み込み中...")
-def fetch_history(uid: str) -> list[dict]:
-    resp = (
-        sb.table("work_logs")
-        .select("*")
-        .eq("user_id", uid)
-        .order("start_time", desc=True)
-        .execute()
-    )
-    return resp.data
+def fetch_history(uid: str) -> list[dict[str, Any]]:
+    resp = sb.table("work_logs").select("*").eq("user_id", uid).order("start_time", desc=True).execute()
+    return [cast("dict[str, Any]", row) for row in (resp.data or []) if isinstance(row, dict)]
 
 
 # ----------------------------------------------------------------
@@ -40,7 +42,7 @@ st.divider()
 # ---- 削除確認ダイアログ ----
 if st.session_state.get("delete_target_id"):
     target_id = st.session_state["delete_target_id"]
-    st.error("⚠️ このレコードを削除しますか？この操作は取り消せません。")
+    st.error("⚠️ このレコードを削除しますか? この操作は取り消せません。")
     col_yes, col_no = st.columns(2)
     with col_yes:
         if st.button("🗑️ 削除する", type="primary", key="confirm_del"):
@@ -83,11 +85,11 @@ for rec in records:
             st.markdown(
                 f"**{start.strftime('%Y/%m/%d')}**  "
                 f"&nbsp; 🕐 {start.strftime('%H:%M')} → {end_str}"
-                f"&nbsp;&nbsp; ⏱ {duration_str}"
+                f"&nbsp;&nbsp; ⏱ {duration_str}",
             )
             # 相手先・作業内容
-            client_str   = rec.get("client")      or "—"
-            task_str     = rec.get("task_detail") or "—"
+            client_str = rec.get("client") or "—"
+            task_str = rec.get("task_detail") or "—"
             st.caption(f"🏢 {client_str}　　📝 {task_str}")
 
         with col_del:

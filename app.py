@@ -1,5 +1,6 @@
 import streamlit as st
-from utils.auth import get_session, refresh_session, logout, get_user
+
+from utils.auth import get_session, get_user, logout, refresh_session
 
 st.set_page_config(
     page_title="作業記録",
@@ -9,7 +10,8 @@ st.set_page_config(
 )
 
 # モバイル最適化 CSS
-st.markdown("""
+st.markdown(
+    """
 <style>
     /* ボタン大きく */
     .stButton > button {
@@ -44,33 +46,33 @@ st.markdown("""
         margin-bottom: 8px;
     }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 refresh_session()
 
 # 招待リンク（?token_hash=）があれば未ログインでもパスワード設定ページへ
-if (
-    st.query_params.get("token_hash")
-    or st.session_state.get("invite_session_exchanged")
-):
+if st.query_params.get("token_hash") or st.session_state.get("invite_session_exchanged"):
     pages = [
         st.Page("pages/set_password.py", title="パスワード設定", icon="🔐", default=True),
     ]
 elif get_session():
     user = get_user()
+    user_email = user.email if user and user.email else "(unknown user)"
 
     # サイドバーにユーザー情報・ログアウト
     with st.sidebar:
-        st.markdown(f"**👤** {user.email}")
+        st.markdown(f"**👤** {user_email}")
         if st.button("ログアウト", key="sidebar_logout"):
             logout()
         st.divider()
 
     pages = [
-        st.Page("pages/timer.py",     title="タイマー",         icon="⏱️",  default=True),
-        st.Page("pages/dashboard.py", title="ダッシュボード",   icon="📊"),
-        st.Page("pages/history.py",   title="履歴",             icon="📋"),
-        st.Page("pages/report.py",    title="PDFレポート",      icon="📄"),
+        st.Page("pages/timer.py", title="タイマー", icon="⏱️", default=True),
+        st.Page("pages/dashboard.py", title="ダッシュボード", icon="📊"),
+        st.Page("pages/history.py", title="履歴", icon="📋"),
+        st.Page("pages/report.py", title="PDFレポート", icon="📄"),
     ]
 else:
     pages = [
