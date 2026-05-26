@@ -1,0 +1,19 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "python: quality gate",
+            "type": "shell",
+            "command": "./scripts/python_quality_gate.sh",
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "python: ruff fix",
+            "type": "shell",
+            "command": "uv run ruff check --fix app.py pages utils",
+            "group": "build",
+            "problemMatcher": []
+        }
+    ]
+}
