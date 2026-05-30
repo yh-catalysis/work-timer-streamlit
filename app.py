@@ -1,6 +1,6 @@
 import streamlit as st
 
-from utils.auth import get_session, get_user, logout, refresh_session
+from utils.auth import get_session, get_user, handle_oauth_callback, logout, refresh_session
 
 st.set_page_config(
     page_title="作業記録",
@@ -51,13 +51,8 @@ st.markdown(
 )
 
 refresh_session()
-
-# 招待リンク（?token_hash=）があれば未ログインでもパスワード設定ページへ
-if st.query_params.get("token_hash") or st.session_state.get("invite_session_exchanged"):
-    pages = [
-        st.Page("pages/set_password.py", title="パスワード設定", icon="🔐", default=True),
-    ]
-elif get_session():
+handle_oauth_callback()
+if get_session():
     user = get_user()
     user_email = user.email if user and user.email else "(unknown user)"
 

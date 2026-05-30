@@ -1,168 +1,240 @@
-# ⏱️ 作業記録アプリ
+# Work Timer App
 
-Streamlit + Supabase を使用した、スマートフォン対応の作業記録 Web アプリです。
-
-## 機能
-
-| ページ | 機能 |
-| -------- | ------ |
-| ⏱️ タイマー | ワンタップで作業開始・終了（タイムスタンプはサーバー側で記録・改ざん防止） |
-| 📊 ダッシュボード | 月別グラフ（相手先別円グラフ・作業内容別棒グラフ・日別積み上げ） |
-| 📋 履歴 | 過去記録の閲覧・削除（値の編集は不可） |
-| 📄 PDF レポート | 日またぎ +24h 表記対応の月次レポート出力 |
+[English](#english) | [日本語](#日本語)
 
 ---
 
-## A. ローカル開発環境でテストする（Supabase CLI + Docker）
+## English
 
-本番に最も近い環境でテストできます。
+A mobile-friendly work logging app built with Streamlit + Supabase.
 
-### 前提条件
+This repository is public under the MIT License.
+You can reproduce the same setup with your own Supabase and Google Cloud projects.
 
-- Docker が起動していること
-- `mise` がインストール済みであること
+### Features
 
-### 1. Supabase CLI をインストール（mise 経由）
+| Page | Description |
+| --- | --- |
+| Timer | Start/stop work with server-side timestamps |
+| Dashboard | Monthly charts (client/task/day breakdown) |
+| History | Read-only log list and delete |
+| PDF Report | Monthly PDF export with day-overflow handling |
+
+### Local Development (Supabase CLI + Docker)
+
+#### Prerequisites
+
+- Docker
+- mise
+- uv
+
+#### 1. Install Supabase CLI
 
 ```bash
 mise use -g supabase@latest
-supabase --version  # 確認
+supabase --version
 ```
 
-### 2. ローカル Supabase を起動
-
-初回はイメージのダウンロードがあるため 5〜15 分かかります。
+#### 2. Start local Supabase
 
 ```bash
-supabase init   # 初回のみ（supabase/ ディレクトリを生成）
-supabase start  # Docker でローカル Supabase を起動
+supabase init
+supabase start
 ```
 
-起動が完了すると以下のような情報が表示されます：
-
-```text
-Project URL    │ http://127.0.0.1:54321
-Publishable    │ sb_publishable_XXXXXXXX...
-Secret         │ sb_secret_XXXXXXXX...
-```
-
-### 3. スキーマを適用する
+#### 3. Apply schema
 
 ```bash
-# migrations ディレクトリにスキーマをコピー（初回のみ）
 mkdir -p supabase/migrations
-cp sql/schema.sql supabase/migrations/{マイグレーション名}.sql
-
-supabase db reset  # マイグレーション適用
+cp sql/schema.sql supabase/migrations/20260521000000_init.sql
+supabase db reset
 ```
 
-### 4. 環境変数を設定する
+#### 4. Configure environment variables
 
 ```bash
 cp .env.example .env
 ```
 
-`.env` を `supabase start` で表示された値で書き換えます：
+Set values based on `supabase start` output and your Google OAuth client:
 
 ```env
 SUPABASE_URL=http://127.0.0.1:54321
-SUPABASE_ANON_KEY=sb_publishable_XXXXXXXX...（Publishable の値）
+SUPABASE_ANON_KEY=sb_publishable_XXXXXXXX...
+TRUSTED_DEVICE_SECRET=replace-with-a-long-random-string
+TRUSTED_DEVICE_DAYS=30
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
 ```
 
-### 5. テストユーザーを作成する
-
-Supabase Auth のサインアップは UI から行えますが、ローカルではメール確認が不要なので
-Admin API で直接作成するのが便利です：
-
-```bash
-curl -X POST http://127.0.0.1:54321/auth/v1/admin/users \
-  -H "apikey: <Secret の値>" \
-  -H "Authorization: Bearer <Secret の値>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "test@example.com",
-    "password": "password123",
-    "email_confirm": true
-  }'
-```
-
-または **Supabase Studio**（`http://127.0.0.1:54323`）を開き、
-**Authentication > Users > Add user** から作成することもできます。
-
-### 6. アプリを起動する
+#### 5. Run app
 
 ```bash
 uv run streamlit run app.py
 ```
 
-ブラウザで `http://localhost:8501` を開き、作成したメール・パスワードでログインします。
+Open <http://localhost:8501> and click Google sign-in.
 
-### 7. ローカル Supabase を停止する
+### Cloud Reproduction (Supabase + Google)
 
-```bash
-supabase stop
-```
+#### 1. Create Supabase project
 
----
+Create your own project at <https://supabase.com>.
 
-## B. リモート Supabase でテストする（Free Tier）
+#### 2. Apply schema
 
-### 1. Supabase プロジェクトを作成
+Run `sql/schema.sql` in SQL Editor.
 
-[supabase.com](https://supabase.com) でプロジェクトを作成します。
+#### 3. Configure Google OAuth
 
-### 2. スキーマを適用する
+1. Create OAuth client in Google Auth Platform (Web application).
+2. Add authorized redirect URIs:
+   - `https://<your-project-ref>.supabase.co/auth/v1/callback`
+   - `http://127.0.0.1:54321/auth/v1/callback`
+3. Keep OAuth app in Testing mode and add your account
+   to Test users if private use.
+4. In Supabase Dashboard > Authentication > Providers > Google, enable and set
+   Client ID / Client Secret.
 
-ダッシュボード > **SQL Editor** で `sql/schema.sql` の内容をすべて貼り付けて実行します。
+#### 4. Configure Streamlit Cloud secrets
 
-### 3. ユーザーを登録する
-
-ダッシュボード > **Authentication > Users > Add user** から作成します。
-
-### 4. 環境変数を設定する
-
-ダッシュボード > **Settings > Data API** からキーを取得します：
-
-```bash
-cp .env.example .env
-```
-
-```env
-SUPABASE_URL=https://your-project-id.supabase.co
-SUPABASE_ANON_KEY=your-anon-key-here
-```
-
-### 5. アプリを起動する
-
-```bash
-uv run streamlit run app.py
-```
-
----
-
-## C. Streamlit Community Cloud にデプロイする
-
-1. このリポジトリを GitHub に push します
-2. [share.streamlit.io](https://share.streamlit.io) でリポジトリを連携してデプロイします
-3. **Settings > Secrets** に以下を追加します：
+Use `.streamlit/secrets.toml.example` as template:
 
 ```toml
 SUPABASE_URL = "https://your-project-id.supabase.co"
 SUPABASE_ANON_KEY = "your-anon-key-here"
+TRUSTED_DEVICE_SECRET = "replace-with-a-long-random-string"
+TRUSTED_DEVICE_DAYS = "30"
 ```
+
+### Security Notes
+
+- Timestamp tamper resistance: timestamps are set in DB RPC via now().
+- Data isolation: RLS with auth.uid() ensures per-user access only.
+- Auth mode: Google OAuth only (email/password flow removed).
+
+### Tech Stack
+
+- Streamlit
+- Supabase (PostgreSQL, Auth, RLS)
+- Plotly
+- ReportLab
+- uv + mise
 
 ---
 
-## 技術スタック
+## 日本語
 
-- **フロントエンド**: [Streamlit](https://streamlit.io/)
-- **データベース**: [Supabase](https://supabase.com/) (PostgreSQL + Row Level Security)
-- **グラフ**: [Plotly](https://plotly.com/)
-- **PDF 生成**: [ReportLab](https://www.reportlab.com/) (HeiseiKakuGo-W5 日本語フォント)
-- **Python バージョン管理**: [uv](https://docs.astral.sh/uv/) + [mise](https://mise.jdx.dev/)
+Streamlit + Supabase を使用した、スマートフォン対応の作業記録 Web アプリです。
 
-## セキュリティ設計
+このリポジトリは MIT License で公開されています。
+自分の Supabase / Google Cloud プロジェクトで同じ構成を再現できます。
 
-- **タイムスタンプ改ざん防止**: `start_time` / `end_time` は Supabase の PostgreSQL RPC 関数内で `now()` を使用。クライアントからの任意の日時送信を受け付けない。
-- **データ分離**: Row Level Security (RLS) により、各ユーザーは自分のデータのみ操作可能。
-- **編集不可**: 記録済みデータの値変更は UI 上から行えない（削除のみ可能）。
+### 機能
+
+| ページ | 機能 |
+| --- | --- |
+| タイマー | ワンタップで作業開始・終了（時刻はサーバー側で記録） |
+| ダッシュボード | 月別グラフ（相手先・作業内容・日別） |
+| 履歴 | 過去記録の閲覧・削除 |
+| PDFレポート | 月次PDF出力（+24h表記対応） |
+
+### ローカル開発（Supabase CLI + Docker）
+
+#### 前提
+
+- Docker
+- mise
+- uv
+
+#### 1. Supabase CLI を導入
+
+```bash
+mise use -g supabase@latest
+supabase --version
+```
+
+#### 2. ローカル Supabase 起動
+
+```bash
+supabase init
+supabase start
+```
+
+#### 3. スキーマ適用
+
+```bash
+mkdir -p supabase/migrations
+cp sql/schema.sql supabase/migrations/20260521000000_init.sql
+supabase db reset
+```
+
+#### 4. 環境変数設定
+
+```bash
+cp .env.example .env
+```
+
+`supabase start` の出力と Google OAuth クライアント情報を使って設定します。
+
+```env
+SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_ANON_KEY=sb_publishable_XXXXXXXX...
+TRUSTED_DEVICE_SECRET=十分に長いランダム文字列
+TRUSTED_DEVICE_DAYS=30
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+```
+
+#### 5. アプリ起動
+
+```bash
+uv run streamlit run app.py
+```
+
+<http://localhost:8501> を開いて Google ログインを実行します。
+
+### クラウド再現（Supabase + Google）
+
+#### 1. Supabase プロジェクト作成
+
+<https://supabase.com> でプロジェクトを作成します。
+
+#### 2. スキーマ適用
+
+SQL Editor で `sql/schema.sql` を実行します。
+
+#### 3. Google OAuth 設定
+
+1. Google Auth Platform で OAuth Client（Web application）を作成
+2. Authorized redirect URIs に以下を追加
+   - `https://<your-project-ref>.supabase.co/auth/v1/callback`
+   - `http://127.0.0.1:54321/auth/v1/callback`
+3. 自分専用で使う場合は Testing のまま Test users を登録
+4. Supabase Dashboard > Authentication > Providers > Google で有効化し、
+   Client ID / Client Secret を設定
+
+#### 4. Streamlit Cloud secrets 設定
+
+`.streamlit/secrets.toml.example` をテンプレートとして使用します。
+
+```toml
+SUPABASE_URL = "https://your-project-id.supabase.co"
+SUPABASE_ANON_KEY = "your-anon-key-here"
+TRUSTED_DEVICE_SECRET = "replace-with-a-long-random-string"
+TRUSTED_DEVICE_DAYS = "30"
+```
+
+### セキュリティ設計
+
+- 時刻改ざん防止: 時刻は DB RPC 内の now() で設定
+- データ分離: RLS + auth.uid() でユーザー単位に制限
+- 認証方式: Google OAuth のみ（メール/パスワード廃止）
+
+### 技術スタック
+
+- Streamlit
+- Supabase（PostgreSQL / Auth / RLS）
+- Plotly
+- ReportLab
+- uv + mise
