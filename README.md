@@ -69,35 +69,15 @@ SUPABASE_URL=http://127.0.0.1:54321
 SUPABASE_ANON_KEY=sb_publishable_XXXXXXXX...（Publishable の値）
 ```
 
-### 5. テストユーザーを作成する
-
-Supabase Auth のサインアップは UI から行えますが、ローカルではメール確認が不要なので
-Admin API で直接作成するのが便利です：
-
-```bash
-curl -X POST http://127.0.0.1:54321/auth/v1/admin/users \
-  -H "apikey: <Secret の値>" \
-  -H "Authorization: Bearer <Secret の値>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "test@example.com",
-    "password": "password123",
-    "email_confirm": true
-  }'
-```
-
-または **Supabase Studio**（`http://127.0.0.1:54323`）を開き、
-**Authentication > Users > Add user** から作成することもできます。
-
-### 6. アプリを起動する
+### 5. アプリを起動する
 
 ```bash
 uv run streamlit run app.py
 ```
 
-ブラウザで `http://localhost:8501` を開き、作成したメール・パスワードでログインします。
+ブラウザで `http://localhost:8501` を開き、Google でログインします。
 
-### 7. ローカル Supabase を停止する
+### 6. ローカル Supabase を停止する
 
 ```bash
 supabase stop
@@ -115,11 +95,7 @@ supabase stop
 
 ダッシュボード > **SQL Editor** で `sql/schema.sql` の内容をすべて貼り付けて実行します。
 
-### 3. ユーザーを登録する
-
-ダッシュボード > **Authentication > Users > Add user** から作成します。
-
-### 4. 環境変数を設定する
+### 3. 環境変数を設定する
 
 ダッシュボード > **Settings > Data API** からキーを取得します：
 
@@ -132,7 +108,7 @@ SUPABASE_URL=https://your-project-id.supabase.co
 SUPABASE_ANON_KEY=your-anon-key-here
 ```
 
-### 5. アプリを起動する
+### 4. アプリを起動する
 
 ```bash
 uv run streamlit run app.py
@@ -163,6 +139,8 @@ SUPABASE_ANON_KEY = "your-anon-key-here"
 
 ## セキュリティ設計
 
-- **タイムスタンプ改ざん防止**: `start_time` / `end_time` は Supabase の PostgreSQL RPC 関数内で `now()` を使用。クライアントからの任意の日時送信を受け付けない。
+- **タイムスタンプ改ざん防止**: `start_time` / `end_time` は Supabase の PostgreSQL RPC
+  関数内で `now()` を使用。クライアントからの任意の日時送信を受け付けない。
 - **データ分離**: Row Level Security (RLS) により、各ユーザーは自分のデータのみ操作可能。
 - **編集不可**: 記録済みデータの値変更は UI 上から行えない（削除のみ可能）。
+- **認証**: Google OAuth を使用し、メール/パスワード認証フローは廃止。

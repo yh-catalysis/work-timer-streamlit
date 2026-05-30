@@ -52,13 +52,7 @@ st.markdown(
 
 refresh_session()
 handle_oauth_callback()
-
-# 招待リンク（?token_hash=）があれば未ログインでもパスワード設定ページへ
-if st.query_params.get("token_hash") or st.session_state.get("invite_session_exchanged"):
-    pages = [
-        st.Page("pages/set_password.py", title="パスワード設定", icon="🔐", default=True),
-    ]
-elif get_session():
+if get_session():
     user = get_user()
     user_email = user.email if user and user.email else "(unknown user)"
 

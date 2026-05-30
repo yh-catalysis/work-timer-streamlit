@@ -138,20 +138,6 @@ def refresh_session():
     _restore_session_from_cookie(client)
 
 
-def login(email: str, password: str) -> tuple[bool, str]:
-    """メール/パスワードでログイン。成功なら (True, "")、失敗なら (False, エラーメッセージ)。"""
-    try:
-        client = get_client()
-        resp = client.auth.sign_in_with_password({"email": email, "password": password})
-        st.session_state["supabase_session"] = resp.session
-        if resp.session:
-            _persist_session_cookie(resp.session.refresh_token)
-    except AUTH_EXCEPTIONS as e:
-        return False, str(e)
-
-    return True, ""
-
-
 def get_google_oauth_url() -> str:
     """Google OAuth ログイン用の認可URLを返す。"""
     client = get_client()
