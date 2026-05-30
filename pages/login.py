@@ -1,9 +1,19 @@
 import streamlit as st
 
-from utils.auth import login
+from utils.auth import get_google_oauth_url, login
 
 st.title("⏱️ 作業記録アプリ")
 st.subheader("ログイン")
+
+oauth_error = st.session_state.pop("oauth_error", None)
+if oauth_error:
+    st.error(oauth_error)
+
+google_oauth_url = get_google_oauth_url()
+
+st.link_button("Google でログイン", google_oauth_url, type="primary", use_container_width=True)
+
+st.divider()
 
 with st.form("login_form"):
     email = st.text_input(
@@ -30,4 +40,4 @@ if submitted:
         else:
             st.error(f"ログインに失敗しました。\n{err}")
 
-st.caption("※ アカウント登録は Supabase Auth ダッシュボードから行います。")
+st.caption("※ メール/パスワードでのログインも引き続き利用できます。")

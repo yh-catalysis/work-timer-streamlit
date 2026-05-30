@@ -1,6 +1,6 @@
 import streamlit as st
 
-from utils.auth import get_session, get_user, logout, refresh_session
+from utils.auth import get_session, get_user, handle_oauth_callback, logout, refresh_session
 
 st.set_page_config(
     page_title="作業記録",
@@ -51,6 +51,7 @@ st.markdown(
 )
 
 refresh_session()
+handle_oauth_callback()
 
 # 招待リンク（?token_hash=）があれば未ログインでもパスワード設定ページへ
 if st.query_params.get("token_hash") or st.session_state.get("invite_session_exchanged"):

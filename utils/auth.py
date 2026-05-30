@@ -152,6 +152,51 @@ def login(email: str, password: str) -> tuple[bool, str]:
     return True, ""
 
 
+def get_google_oauth_url() -> str:
+    """Google OAuth ログイン用の認可URLを返す。"""
+    client = get_client()
+    response = client.auth.sign_in_with_oauth({"provider": "google"})
+    return response.url
+
+
+def exchange_oauth_code(auth_code: str) -> None:
+    """OAuth コールバックの認可コードをセッションに交換する。"""
+    client = get_client()
+    response = client.auth.exchange_code_for_session({"auth_code": auth_code})
+    if response.session:
+        st.session_state["supabase_session"] = response.session
+        _persist_session_cookie(response.session.refresh_token)
+
+
+def handle_oauth_callback() -> bool:
+    """OAuth の戻りURLが開かれた場合にコードを交換する。成功時は True。"""
+    oauth_error = st.query_params.get("error")
+    if isinstance(oauth_error, list):
+        oauth_error = oauth_error[0] if oauth_error else None
+    if oauth_error:
+        st.session_state["oauth_error"] = oauth_error
+        st.query_params.clear()
+        st.rerun()
+
+    auth_code = st.query_params.get("code")
+    if isinstance(auth_code, list):
+        auth_code = auth_code[0] if auth_code else None
+
+    if not auth_code:
+        return False
+
+    try:
+        exchange_oauth_code(auth_code)
+    except AUTH_EXCEPTIONS as exc:
+        st.session_state["oauth_error"] = str(exc)
+        st.query_params.clear()
+        st.rerun()
+
+    st.query_params.clear()
+    st.rerun()
+    return True
+
+
 def logout():
     """ログアウトしてセッションをクリアする。"""
     with suppress(*AUTH_EXCEPTIONS):
