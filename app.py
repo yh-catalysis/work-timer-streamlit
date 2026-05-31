@@ -1,3 +1,6 @@
+import os
+from urllib.parse import urlparse
+
 import streamlit as st
 
 from utils.auth import get_session, get_user, handle_oauth_callback, logout, refresh_session
@@ -55,10 +58,15 @@ handle_oauth_callback()
 if get_session():
     user = get_user()
     user_email = user.email if user and user.email else "(unknown user)"
+    supabase_url = os.environ.get("SUPABASE_URL", "")
+    parsed_host = urlparse(supabase_url).netloc or "(unknown)"
+    is_local_target = "127.0.0.1" in parsed_host or "localhost" in parsed_host
+    env_label = "LOCAL" if is_local_target else "CLOUD"
 
     # サイドバーにユーザー情報・ログアウト
     with st.sidebar:
         st.markdown(f"**👤** {user_email}")
+        st.caption(f"接続先: {env_label} ({parsed_host})")
         if st.button("ログアウト", key="sidebar_logout"):
             logout()
         st.divider()
