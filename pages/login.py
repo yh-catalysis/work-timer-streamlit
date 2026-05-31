@@ -17,7 +17,7 @@ if oauth_error:
 google_oauth_url = get_google_oauth_url()
 st.markdown(
     f"""
-<a href="{google_oauth_url}" target="_self" style="text-decoration: none;">
+<a href="{google_oauth_url}" target="_top" style="text-decoration: none;">
     <div style="
         width: 100%;
         min-height: 3.2rem;
