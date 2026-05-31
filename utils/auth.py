@@ -13,21 +13,6 @@ COOKIE_REFRESH_TOKEN_KEY = "wt_refresh_token"  # noqa: S105
 COOKIE_REFRESH_EXPIRES_AT_KEY = "wt_refresh_expires_at"
 
 
-def _resolve_oauth_redirect_to() -> str | None:
-    """ローカル実行時のみ OAuth 後の戻り先 URL を決定する。"""
-    supabase_url = os.environ.get("SUPABASE_URL", "").strip().lower()
-    if "127.0.0.1" in supabase_url or "localhost" in supabase_url:
-        explicit = os.environ.get("OAUTH_REDIRECT_TO", "").strip()
-        if explicit:
-            return explicit
-
-        port = os.environ.get("STREAMLIT_SERVER_PORT", "8501").strip() or "8501"
-        return f"http://127.0.0.1:{port}"
-
-    # Cloud 実行時は Supabase 側設定（site_url / additional_redirect_urls）に委譲
-    return None
-
-
 def get_session():
     """現在の Supabase セッションを返す。未ログインなら None。"""
     return st.session_state.get("supabase_session")
@@ -153,54 +138,18 @@ def refresh_session():
     _restore_session_from_cookie(client)
 
 
-def get_google_oauth_url() -> str:
-    """Google OAuth ログイン用の認可URLを返す。"""
-    client = get_client()
-    redirect_to = _resolve_oauth_redirect_to()
-    oauth_params: dict[str, object] = {"provider": "google"}
-    if redirect_to:
-        oauth_params["options"] = {"redirect_to": redirect_to}
-
-    response = client.auth.sign_in_with_oauth(oauth_params)
-    return response.url
-
-
-def exchange_oauth_code(auth_code: str) -> None:
-    """OAuth コールバックの認可コードをセッションに交換する。"""
-    client = get_client()
-    response = client.auth.exchange_code_for_session({"auth_code": auth_code})
-    if response.session:
-        st.session_state["supabase_session"] = response.session
-        _persist_session_cookie(response.session.refresh_token)
-
-
-def handle_oauth_callback() -> bool:
-    """OAuth の戻りURLが開かれた場合にコードを交換する。成功時は True。"""
-    oauth_error = st.query_params.get("error")
-    if isinstance(oauth_error, list):
-        oauth_error = oauth_error[0] if oauth_error else None
-    if oauth_error:
-        st.session_state["oauth_error"] = oauth_error
-        st.query_params.clear()
-        st.rerun()
-
-    auth_code = st.query_params.get("code")
-    if isinstance(auth_code, list):
-        auth_code = auth_code[0] if auth_code else None
-
-    if not auth_code:
-        return False
-
+def login(email: str, password: str) -> tuple[bool, str]:
+    """メール/パスワードでログイン。成功なら (True, "")、失敗なら (False, エラーメッセージ)。"""
     try:
-        exchange_oauth_code(auth_code)
-    except AUTH_EXCEPTIONS as exc:
-        st.session_state["oauth_error"] = str(exc)
-        st.query_params.clear()
-        st.rerun()
+        client = get_client()
+        resp = client.auth.sign_in_with_password({"email": email, "password": password})
+        st.session_state["supabase_session"] = resp.session
+        if resp.session:
+            _persist_session_cookie(resp.session.refresh_token)
+    except AUTH_EXCEPTIONS as e:
+        return False, str(e)
 
-    st.query_params.clear()
-    st.rerun()
-    return True
+    return True, ""
 
 
 def logout():
