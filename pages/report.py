@@ -20,7 +20,7 @@ WorkLogRecord = dict[str, Any]
 refresh_session()
 user_id = get_user_id()
 if not user_id:
-    st.switch_page("pages/login.py")
+    st.switch_page("app.py")
     st.stop()
 
 sb = get_client()
