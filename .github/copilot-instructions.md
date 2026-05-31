@@ -95,4 +95,4 @@ while Pylance catches type-flow issues
 
 - `.env` is gitignored — never commit it.
 - Commit only after the user has completed local testing.
-- Never include `Co-authored-by` trailers in commits.
+- Always include the Co-authored-by trailer in commits.

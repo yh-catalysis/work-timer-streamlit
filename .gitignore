@@ -39,7 +39,6 @@ desktop.ini
 *.swp
 *.swo
 *~
-.vscode/settings.json
 
 # ===== 出力ファイル =====
 *.pdf
