@@ -13,6 +13,20 @@ COOKIE_REFRESH_TOKEN_KEY = "wt_refresh_token"  # noqa: S105
 COOKIE_REFRESH_EXPIRES_AT_KEY = "wt_refresh_expires_at"
 
 
+def _resolve_oauth_redirect_to() -> str | None:
+    """実行環境に応じて OAuth 後の戻り先 URL を決定する。"""
+    explicit = os.environ.get("OAUTH_REDIRECT_TO", "").strip()
+    if explicit:
+        return explicit
+
+    supabase_url = os.environ.get("SUPABASE_URL", "").strip().lower()
+    if "127.0.0.1" in supabase_url or "localhost" in supabase_url:
+        port = os.environ.get("STREAMLIT_SERVER_PORT", "8501").strip() or "8501"
+        return f"http://127.0.0.1:{port}"
+
+    return None
+
+
 def get_session():
     """現在の Supabase セッションを返す。未ログインなら None。"""
     return st.session_state.get("supabase_session")
@@ -141,7 +155,12 @@ def refresh_session():
 def get_google_oauth_url() -> str:
     """Google OAuth ログイン用の認可URLを返す。"""
     client = get_client()
-    response = client.auth.sign_in_with_oauth({"provider": "google"})
+    redirect_to = _resolve_oauth_redirect_to()
+    oauth_params: dict[str, object] = {"provider": "google"}
+    if redirect_to:
+        oauth_params["options"] = {"redirect_to": redirect_to}
+
+    response = client.auth.sign_in_with_oauth(oauth_params)
     return response.url
 
 
