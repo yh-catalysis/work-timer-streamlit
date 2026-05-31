@@ -108,8 +108,10 @@ SUPABASE_URL = "https://your-project-id.supabase.co"
 SUPABASE_ANON_KEY = "your-anon-key-here"
 TRUSTED_DEVICE_SECRET = "replace-with-a-long-random-string"
 TRUSTED_DEVICE_DAYS = "30"
-OAUTH_REDIRECT_TO = "https://your-app.streamlit.app"
 ```
+
+Do not set `OAUTH_REDIRECT_TO` on Streamlit Cloud.
+It is only for local OAuth verification.
 
 ### Desktop PWA (Chrome) notes
 
@@ -240,8 +242,10 @@ SUPABASE_URL = "https://your-project-id.supabase.co"
 SUPABASE_ANON_KEY = "your-anon-key-here"
 TRUSTED_DEVICE_SECRET = "replace-with-a-long-random-string"
 TRUSTED_DEVICE_DAYS = "30"
-OAUTH_REDIRECT_TO = "https://your-app.streamlit.app"
 ```
+
+Streamlit Cloud では `OAUTH_REDIRECT_TO` を設定しないでください。
+この変数はローカルOAuth検証専用です。
 
 ### PC版PWA（Chrome）利用時の注意
 
