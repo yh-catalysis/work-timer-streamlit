@@ -14,16 +14,17 @@ COOKIE_REFRESH_EXPIRES_AT_KEY = "wt_refresh_expires_at"
 
 
 def _resolve_oauth_redirect_to() -> str | None:
-    """実行環境に応じて OAuth 後の戻り先 URL を決定する。"""
-    explicit = os.environ.get("OAUTH_REDIRECT_TO", "").strip()
-    if explicit:
-        return explicit
-
+    """ローカル実行時のみ OAuth 後の戻り先 URL を決定する。"""
     supabase_url = os.environ.get("SUPABASE_URL", "").strip().lower()
     if "127.0.0.1" in supabase_url or "localhost" in supabase_url:
+        explicit = os.environ.get("OAUTH_REDIRECT_TO", "").strip()
+        if explicit:
+            return explicit
+
         port = os.environ.get("STREAMLIT_SERVER_PORT", "8501").strip() or "8501"
         return f"http://127.0.0.1:{port}"
 
+    # Cloud 実行時は Supabase 側設定（site_url / additional_redirect_urls）に委譲
     return None
 
 
