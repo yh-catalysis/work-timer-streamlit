@@ -22,7 +22,7 @@ supabase/migrations/    # Kept in sync with sql/schema.sql via supabase db reset
 
 ## Environment & Tooling
 
-- **Python**: 3.13, managed by `uv` (mise → uv → .venv)
+- **Python**: 3.14, managed by `uv` (mise → uv → .venv)
 - **Run app**: `uv run streamlit run app.py`
 - **Supabase CLI**: installed via `mise use -g supabase@latest`
 - **Node / npm packages**: mise for Node version, pnpm for package management
