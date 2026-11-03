@@ -28,6 +28,12 @@
       "groupName": "github-actions",
       "groupSlug": "gha",
       "automerge": true
+    },
+    {
+      "description": "【Python】.python-version は 3.14 で止める。streamlit-cookies-manager は st.cache を呼ぶので Streamlit 1.61 までしか動かず、Streamlit 1.61 が入れる pyarrow は Python 3.15 でビルドに失敗する。このライブラリを置き換えたら外す",
+      "matchManagers": ["pyenv"],
+      "matchPackageNames": ["python"],
+      "allowedVersions": "<3.15"
     }
   ],
   "lockFileMaintenance": {
